@@ -1173,7 +1173,7 @@ sub _stream {
   my $mode     = $url->query->param('mode') || 0;
   my $user     = $url->username             || $nick;
   my $realname = $url->query->param('realname');
-  $realname = $realname ? "$realname via $CONVOS_URL" : $CONVOS_URL;
+  $realname = $realname ? "$realname" : 'Unknown';
 
   $user =~ s/^[^a-zA-Z0-9]/x/;
   $self->_write("USER $user $mode * :$realname\r\n");
