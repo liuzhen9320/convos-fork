@@ -1,44 +1,42 @@
-name: docker
+name: Docker
 on:
   push:
-    tags:
-      - v*.*
+    branches: [ "main" ]
+  workflow_dispatch:
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: liuzhen932/app-convos
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Calculate tag name
-        id: calculate_tag
-        run: |
-          if echo $GITHUB_REF | grep -q '^refs/tags/v'; then
-            VERSION=$(echo $GITHUB_REF | cut -d/ -f3);
-            TAG_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:$VERSION";
-          fi
-          echo '::set-output name=tag::'$TAG_NAME
-      - name: Check Out Repo
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Login to registry
-        uses: "docker/login-action@v3.3.0"
-        with:
-          registry: ${{ env.REGISTRY }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          username: ${{ github.actor }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
-        id: buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v5
+
+      - name: Log into registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
         with:
-          context: ./
-          file: ./Dockerfile
+          registry: docker.io
+          username: liuzhen932
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ env.IMAGE_NAME }}
+          tags: |
+            latest
+
+      - name: Build & Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:stable,${{ steps.calculate_tag.outputs.tag }}
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+          tags: ${{ steps.meta.outputs.tags }}
